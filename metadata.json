@@ -1,0 +1,7 @@
+{
+  "name": "Atlas 2.0 Coach",
+  "description": "A virtual gym coach powered by Gemini. It creates personalized workout and nutrition plans, tracks progress, and offers interactive coaching via text or voice.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
