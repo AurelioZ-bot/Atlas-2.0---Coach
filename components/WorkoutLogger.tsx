@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { DailyWorkout, WorkoutLog, ExerciseLog } from '../types';
 
@@ -20,6 +19,9 @@ const WorkoutLogger: React.FC<WorkoutLoggerProps> = ({ dailyWorkout, onLogComple
     );
 
     const [listeningExerciseIdx, setListeningExerciseIdx] = useState<number | null>(null);
+    // State to track which exercise description is currently expanded
+    const [expandedDescriptionIdx, setExpandedDescriptionIdx] = useState<number | null>(null);
+    
     const recognitionRef = useRef<any | null>(null);
 
     useEffect(() => {
@@ -102,8 +104,6 @@ const WorkoutLogger: React.FC<WorkoutLoggerProps> = ({ dailyWorkout, onLogComple
         const set = exerciseLogs[exIndex].sets[setIndex];
         // If both fields are filled, play a subtle sound to indicate completion
         if (set.reps > 0 && set.weight > 0) {
-            // Simple debounce/logic check could be added here to prevent spamming,
-            // but for now it provides immediate confirmation on data entry.
             playFeedbackSound('set');
         }
     };
@@ -230,26 +230,55 @@ const WorkoutLogger: React.FC<WorkoutLoggerProps> = ({ dailyWorkout, onLogComple
                     <h2 id="workout-logger-title" className="text-2xl font-bold text-cyan-400">Registrar Entrenamiento: {dailyWorkout.focus}</h2>
                 </div>
                 <div className="p-6 space-y-4 overflow-y-auto">
-                    {exerciseLogs.map((exLog, exIndex) => (
+                    {exerciseLogs.map((exLog, exIndex) => {
+                        // Access the original exercise data to get the description
+                        const originalExercise = dailyWorkout.exercises[exIndex];
+                        const isExpanded = expandedDescriptionIdx === exIndex;
+
+                        return (
                         <div key={exIndex} className="bg-gray-700 p-4 rounded-lg transition-colors duration-300 border border-transparent">
                             <div className="flex justify-between items-center mb-3">
                                 <h3 className="font-semibold text-lg text-white">{exLog.exerciseName}</h3>
-                                <button 
-                                    onClick={() => toggleListening(exIndex)}
-                                    className={`p-2 rounded-full transition-all flex items-center space-x-2 ${
-                                        listeningExerciseIdx === exIndex 
-                                        ? 'bg-red-500/20 text-red-400 ring-2 ring-red-500 animate-pulse' 
-                                        : 'bg-gray-600 text-gray-300 hover:bg-cyan-600 hover:text-white'
-                                    }`}
-                                    title="Dictar series por voz"
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                                    </svg>
-                                    {listeningExerciseIdx === exIndex && <span className="text-xs font-bold">Escuchando...</span>}
-                                </button>
+                                <div className="flex space-x-2">
+                                     <button 
+                                        onClick={() => setExpandedDescriptionIdx(isExpanded ? null : exIndex)}
+                                        className={`p-2 rounded-full transition-all flex items-center justify-center ${
+                                            isExpanded ? 'bg-cyan-500/20 text-cyan-400' : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
+                                        }`}
+                                        title="Ver técnica"
+                                    >
+                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </button>
+
+                                    <button 
+                                        onClick={() => toggleListening(exIndex)}
+                                        className={`p-2 rounded-full transition-all flex items-center space-x-2 ${
+                                            listeningExerciseIdx === exIndex 
+                                            ? 'bg-red-500/20 text-red-400 ring-2 ring-red-500 animate-pulse' 
+                                            : 'bg-gray-600 text-gray-300 hover:bg-cyan-600 hover:text-white'
+                                        }`}
+                                        title="Dictar series por voz"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                                        </svg>
+                                        {listeningExerciseIdx === exIndex && <span className="text-xs font-bold">Escuchando...</span>}
+                                    </button>
+                                </div>
                             </div>
                             
+                            {/* Description Panel */}
+                            {isExpanded && (
+                                <div className="mb-4 bg-gray-800/80 p-3 rounded-lg border-l-4 border-cyan-500 animate-fade-in">
+                                    <p className="text-sm text-gray-300">
+                                        <span className="font-bold text-cyan-400 block mb-1">Ejecución:</span>
+                                        {originalExercise.description || "Sin descripción disponible."}
+                                    </p>
+                                </div>
+                            )}
+
                             {listeningExerciseIdx === exIndex && (
                                 <div className="mb-3 text-xs text-gray-400 bg-gray-800/50 p-2 rounded border border-gray-600">
                                     Di: "Serie 1, 10 reps, 20 kilos" o simplemente "10 reps, 20 kilos"
@@ -287,7 +316,7 @@ const WorkoutLogger: React.FC<WorkoutLoggerProps> = ({ dailyWorkout, onLogComple
                                 ))}
                             </div>
                         </div>
-                    ))}
+                    )})}
                 </div>
                 <div className="flex justify-end space-x-4 p-6 border-t border-gray-700 mt-auto">
                     <button onClick={onCancel} className="px-6 py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 transition">

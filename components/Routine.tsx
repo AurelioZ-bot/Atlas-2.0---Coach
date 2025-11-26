@@ -1,56 +1,44 @@
 
 import React, { useState, useEffect } from 'react';
 import { WorkoutPlan, DailyWorkout, Exercise } from '../types';
-import { generateExerciseImages } from '../services/geminiService';
 
 interface RoutineProps {
   workoutPlan: WorkoutPlan | null;
+  setWorkoutPlan: (plan: WorkoutPlan | null) => void;
   setLoggingWorkout: (workout: DailyWorkout | null) => void;
 }
-
-const ImageSkeleton: React.FC = () => (
-    <div className="w-full aspect-square bg-gray-700 rounded-lg animate-pulse flex items-center justify-center border border-gray-600">
-        <svg className="w-12 h-12 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-        </svg>
-    </div>
-);
 
 const ExerciseCard: React.FC<{ 
     exercise: Exercise;
     exerciseId: string;
     isCompleted: boolean;
     onToggleComplete: (id: string) => void;
-}> = ({ exercise, exerciseId, isCompleted, onToggleComplete }) => {
+    // DND Props
+    draggable?: boolean;
+    onDragStart?: (e: React.DragEvent) => void;
+    onDragOver?: (e: React.DragEvent) => void;
+    onDrop?: (e: React.DragEvent) => void;
+}> = ({ exercise, exerciseId, isCompleted, onToggleComplete, draggable, onDragStart, onDragOver, onDrop }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [imageUrls, setImageUrls] = useState<{ eccentricUrl: string; concentricUrl: string } | null>(null);
-  const [isLoadingImages, setIsLoadingImages] = useState(false);
-  const [imageError, setImageError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (isOpen && !imageUrls && !isLoadingImages) {
-      const fetchImages = async () => {
-        setIsLoadingImages(true);
-        setImageError(null);
-        try {
-          const urls = await generateExerciseImages(exercise.name);
-          setImageUrls(urls);
-        } catch (error) {
-          console.error("Failed to fetch exercise images:", error);
-          setImageError("No se pudieron cargar las imágenes del ejercicio.");
-        } finally {
-          setIsLoadingImages(false);
-        }
-      };
-
-      fetchImages();
-    }
-  }, [isOpen, imageUrls, isLoadingImages, exercise.name]);
 
   return (
-    <div className={`bg-gray-700 rounded-xl overflow-hidden transition-all duration-300 ${isCompleted ? 'opacity-60 bg-gray-800' : 'opacity-100 shadow-lg hover:bg-gray-600'}`}>
-      <div className="p-4 flex justify-between items-center">
+    <div 
+        className={`bg-gray-700 rounded-xl overflow-hidden transition-all duration-300 ${isCompleted ? 'opacity-60 bg-gray-800' : 'opacity-100 shadow-lg hover:bg-gray-600'} group`}
+        draggable={draggable}
+        onDragStart={onDragStart}
+        onDragOver={onDragOver}
+        onDrop={onDrop}
+    >
+      <div className="p-4 flex justify-between items-center cursor-move md:cursor-default">
         <div className="flex items-center space-x-4 flex-1 min-w-0">
+             
+             {/* Drag Handle Icon - Visible on hover or touch */}
+             <div className="hidden group-hover:block md:block cursor-move text-gray-500 hover:text-cyan-400" title="Arrastrar para reordenar">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+                </svg>
+             </div>
+
              <div className="relative flex items-center justify-center">
                 <input 
                     type="checkbox" 
@@ -95,94 +83,20 @@ const ExerciseCard: React.FC<{
         </button>
       </div>
       
-      <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isOpen ? 'max-h-[1200px] opacity-100' : 'max-h-0 opacity-0'}`}>
-          <div className="p-6 bg-gray-800/50 border-t border-gray-600 space-y-8">
+      <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
+          <div className="p-6 bg-gray-800/50 border-t border-gray-600 space-y-4">
             
             {/* Technical Description */}
             <div>
                 <h5 className="font-semibold text-cyan-400 mb-3 flex items-center text-lg">
                     <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                    Técnica Correcta
+                    Guía Técnica y Ejecución
                 </h5>
-                <div className="bg-gray-800 p-4 rounded-lg border border-gray-700/50">
-                     <p className="text-gray-300 leading-relaxed">{exercise.description || 'No hay descripción de técnica disponible.'}</p>
+                <div className="bg-gray-800 p-5 rounded-lg border border-gray-700/50 shadow-inner">
+                     <p className="text-gray-300 leading-relaxed whitespace-pre-line text-base">
+                        {exercise.description || 'No hay descripción de técnica disponible.'}
+                     </p>
                 </div>
-            </div>
-            
-            {/* Visual Demonstration */}
-            <div>
-                <h5 className="font-semibold text-cyan-400 mb-4 flex items-center text-lg">
-                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                    Demostración Visual
-                </h5>
-                
-                {isLoadingImages && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                            <div className="h-4 bg-gray-700 rounded w-1/3 animate-pulse"></div>
-                            <ImageSkeleton />
-                        </div>
-                        <div className="space-y-2">
-                             <div className="h-4 bg-gray-700 rounded w-1/3 animate-pulse"></div>
-                            <ImageSkeleton />
-                        </div>
-                    </div>
-                )}
-
-                {imageError && (
-                    <div className="bg-red-900/20 border border-red-800/50 p-6 rounded-lg text-center">
-                        <svg className="w-10 h-10 text-red-400 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                        <p className="text-red-300 font-medium">{imageError}</p>
-                        <button 
-                            onClick={() => { setImageUrls(null); setIsOpen(false); setTimeout(() => setIsOpen(true), 50); }}
-                            className="mt-3 px-4 py-2 bg-red-900/40 hover:bg-red-900/60 text-red-200 rounded-md text-sm transition-colors"
-                        >
-                            Intentar nuevamente
-                        </button>
-                    </div>
-                )}
-
-                {imageUrls && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 animate-fade-in">
-                        {/* Eccentric Card */}
-                        <div className="group relative bg-gray-900 rounded-xl overflow-hidden shadow-xl border border-gray-700 hover:border-cyan-500/50 transition-all duration-300">
-                             <div className="absolute top-0 left-0 w-full bg-gradient-to-b from-black/60 to-transparent p-4 z-10 pointer-events-none">
-                                <span className="inline-flex items-center px-3 py-1 rounded-full bg-cyan-900/80 border border-cyan-500/30 text-cyan-300 text-xs font-bold uppercase tracking-wider backdrop-blur-sm shadow-sm">
-                                    Fase Excéntrica
-                                </span>
-                             </div>
-                            <div className="aspect-square w-full bg-white relative">
-                                 <img 
-                                    src={imageUrls.eccentricUrl} 
-                                    alt={`Fase excéntrica de ${exercise.name}`}
-                                    className="w-full h-full object-contain p-6 transform transition-transform duration-700 group-hover:scale-105"
-                                />
-                            </div>
-                             <div className="p-3 bg-gray-800 border-t border-gray-700">
-                                <p className="text-gray-400 text-sm text-center font-medium">Posición Inicial / Estiramiento</p>
-                            </div>
-                        </div>
-
-                        {/* Concentric Card */}
-                        <div className="group relative bg-gray-900 rounded-xl overflow-hidden shadow-xl border border-gray-700 hover:border-green-500/50 transition-all duration-300">
-                            <div className="absolute top-0 left-0 w-full bg-gradient-to-b from-black/60 to-transparent p-4 z-10 pointer-events-none">
-                                <span className="inline-flex items-center px-3 py-1 rounded-full bg-green-900/80 border border-green-500/30 text-green-300 text-xs font-bold uppercase tracking-wider backdrop-blur-sm shadow-sm">
-                                    Fase Concéntrica
-                                </span>
-                             </div>
-                            <div className="aspect-square w-full bg-white relative">
-                                 <img 
-                                    src={imageUrls.concentricUrl} 
-                                    alt={`Fase concéntrica de ${exercise.name}`}
-                                    className="w-full h-full object-contain p-6 transform transition-transform duration-700 group-hover:scale-105"
-                                />
-                            </div>
-                            <div className="p-3 bg-gray-800 border-t border-gray-700">
-                                <p className="text-gray-400 text-sm text-center font-medium">Posición Final / Contracción</p>
-                            </div>
-                        </div>
-                    </div>
-                )}
             </div>
           </div>
       </div>
@@ -190,10 +104,18 @@ const ExerciseCard: React.FC<{
   );
 };
 
-const Routine: React.FC<RoutineProps> = ({ workoutPlan, setLoggingWorkout }) => {
+const Routine: React.FC<RoutineProps> = ({ workoutPlan, setWorkoutPlan, setLoggingWorkout }) => {
   const [activeDay, setActiveDay] = useState<number | null>(workoutPlan?.dailyWorkouts[0]?.day ?? null);
   const [completedExercises, setCompletedExercises] = useState<Set<string>>(new Set());
-  
+  const [draggedItemIndex, setDraggedItemIndex] = useState<number | null>(null);
+
+  // Ensure activeDay is set when workoutPlan loads if it was previously null
+  useEffect(() => {
+    if (workoutPlan?.dailyWorkouts?.[0]?.day && activeDay === null) {
+      setActiveDay(workoutPlan.dailyWorkouts[0].day);
+    }
+  }, [workoutPlan, activeDay]);
+
   // Load completed exercises for the active day from localStorage
   useEffect(() => {
     if (activeDay !== null) {
@@ -229,6 +151,61 @@ const Routine: React.FC<RoutineProps> = ({ workoutPlan, setLoggingWorkout }) => 
         return newSet;
     });
   };
+
+  // Drag and Drop Handlers
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+      setDraggedItemIndex(index);
+      // DataTransfer for compatibility, though we use state primarily
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', index.toString());
+      // Make drag ghost slightly transparent
+      if (e.target instanceof HTMLElement) {
+          e.target.style.opacity = '0.5';
+      }
+  };
+
+  const handleDragEnd = (e: React.DragEvent) => {
+      setDraggedItemIndex(null);
+      if (e.target instanceof HTMLElement) {
+          e.target.style.opacity = '';
+      }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+      e.preventDefault(); // Necessary to allow dropping
+      e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+      e.preventDefault();
+      
+      // Reset styles
+      if (e.target instanceof HTMLElement) {
+         e.target.style.opacity = '';
+      }
+
+      const dragIndex = draggedItemIndex;
+      if (dragIndex === null || dragIndex === dropIndex) return;
+
+      if (!workoutPlan || activeDay === null) return;
+
+      // Deep copy to ensure state update triggers
+      const newPlan = JSON.parse(JSON.stringify(workoutPlan));
+      const dayIndex = newPlan.dailyWorkouts.findIndex((d: DailyWorkout) => d.day === activeDay);
+
+      if (dayIndex === -1) return;
+
+      const exercises = newPlan.dailyWorkouts[dayIndex].exercises;
+      
+      // Reorder logic
+      const [draggedItem] = exercises.splice(dragIndex, 1);
+      exercises.splice(dropIndex, 0, draggedItem);
+      
+      // Update state
+      setWorkoutPlan(newPlan);
+      setDraggedItemIndex(null);
+  };
+
 
   if (!workoutPlan) {
     return <div className="text-center text-gray-400 p-8">No se ha cargado ningún plan de entrenamiento.</div>;
@@ -298,15 +275,23 @@ const Routine: React.FC<RoutineProps> = ({ workoutPlan, setLoggingWorkout }) => 
                 const exerciseId = `${activeDayData.day}-${index}`;
                 return (
                     <ExerciseCard 
-                        key={exerciseId} 
+                        key={exerciseId} // Key remains stable based on content position for reorder
                         exercise={exercise} 
                         exerciseId={exerciseId}
                         isCompleted={completedExercises.has(exerciseId)}
                         onToggleComplete={handleToggleExercise}
+                        draggable={true}
+                        onDragStart={(e) => handleDragStart(e, index)}
+                        onDragOver={handleDragOver}
+                        onDrop={(e) => handleDrop(e, index)}
                     />
                 );
               })}
             </div>
+            
+            <p className="text-xs text-center text-gray-500 mt-4">
+                Tip: Arrastra los ejercicios desde el icono de las barras para reordenarlos.
+            </p>
           </div>
         )}
       </div>

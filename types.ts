@@ -1,6 +1,7 @@
 
 export interface UserProfile {
   name: string;
+  phone?: string; // Changed from email to phone
   sex: 'male' | 'female';
   age: number;
   weight: number;
@@ -74,4 +75,11 @@ export interface WorkoutLog {
   date: string;
   workoutFocus: string;
   exercises: ExerciseLog[];
+}
+
+export interface RegisteredUser {
+  phone: string; // Identifier
+  name: string;
+  isActive: boolean;
+  registrationDate: string;
 }

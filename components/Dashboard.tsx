@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { UserProfile, WorkoutPlan, NutritionPlan, WorkoutLog, DailyWorkout } from '../types';
 import Home from './Home';
@@ -25,8 +26,13 @@ interface DashboardProps {
   addWorkoutLog: (log: WorkoutLog) => void;
   onLogout: () => void;
   onUpdateProfile: (profile: UserProfile) => void;
+  // Admin & Subscription Props
   subscriptionPrice: number;
   onUpdatePrice: (price: number) => void;
+  paymentLink: string;
+  onUpdatePaymentLink: (link: string) => void;
+  adminPhone: string;
+  onUpdateAdminPhone: (phone: string) => void;
 }
 
 const NavIcon: React.FC<{ icon: React.ReactNode, text: string, isActive: boolean, onClick: () => void }> = ({ icon, text, isActive, onClick }) => (
@@ -86,6 +92,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
       case 'routine':
         return <Routine 
             workoutPlan={props.workoutPlan} 
+            setWorkoutPlan={props.setWorkoutPlan}
             setLoggingWorkout={setLoggingWorkout} 
         />;
       case 'nutrition':
@@ -102,13 +109,22 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
       case 'subscription':
         return <Subscription 
             isSubscribed={props.isSubscribed} 
-            setIsSubscribed={props.setIsSubscribed} 
+            userProfile={props.userProfile}
             subscriptionPrice={props.subscriptionPrice} 
+            paymentLink={props.paymentLink}
+            adminPhone={props.adminPhone}
         />;
       case 'profile':
         return <Profile userProfile={props.userProfile} onUpdateProfile={props.onUpdateProfile} />;
       case 'admin':
-        return <Admin subscriptionPrice={props.subscriptionPrice} onUpdatePrice={props.onUpdatePrice} />;
+        return <Admin 
+            subscriptionPrice={props.subscriptionPrice} 
+            onUpdatePrice={props.onUpdatePrice}
+            paymentLink={props.paymentLink}
+            onUpdatePaymentLink={props.onUpdatePaymentLink}
+            adminPhone={props.adminPhone}
+            onUpdateAdminPhone={props.onUpdateAdminPhone}
+        />;
       default:
         return <Home 
             userProfile={props.userProfile} 

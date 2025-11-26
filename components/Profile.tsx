@@ -38,14 +38,18 @@ const Profile: React.FC<ProfileProps> = ({ userProfile, onUpdateProfile }) => {
                             <input type="text" name="name" value={profile.name} onChange={handleChange} required className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-cyan-500 focus:border-cyan-500"/>
                         </div>
                         <div>
+                            <label className="block text-sm font-medium text-gray-300">Teléfono</label>
+                            <input type="tel" name="phone" value={profile.phone || ''} onChange={handleChange} required className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-cyan-500 focus:border-cyan-500" placeholder="Ej: 11 1234 5678"/>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
                             <label className="block text-sm font-medium text-gray-300">Sexo Biológico</label>
                             <select name="sex" value={profile.sex} onChange={handleChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-cyan-500 focus:border-cyan-500">
                                 <option value="male">Masculino</option>
                                 <option value="female">Femenino</option>
                             </select>
                         </div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
                         <div>
                         <label className="block text-sm font-medium text-gray-300">Edad</label>
                         <input type="number" name="age" value={profile.age || ''} onChange={handleChange} required className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-cyan-500 focus:border-cyan-500"/>
@@ -54,10 +58,10 @@ const Profile: React.FC<ProfileProps> = ({ userProfile, onUpdateProfile }) => {
                         <label className="block text-sm font-medium text-gray-300">Peso (kg)</label>
                         <input type="number" name="weight" value={profile.weight || ''} onChange={handleChange} required className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-cyan-500 focus:border-cyan-500"/>
                         </div>
-                        <div>
+                    </div>
+                     <div>
                         <label className="block text-sm font-medium text-gray-300">Altura (cm)</label>
                         <input type="number" name="height" value={profile.height || ''} onChange={handleChange} required className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-cyan-500 focus:border-cyan-500"/>
-                        </div>
                     </div>
                 </div>
 
