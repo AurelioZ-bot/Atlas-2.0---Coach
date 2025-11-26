@@ -1,30 +1,47 @@
-import { GoogleGenAI, Type, GenerateContentResponse, Chat, Modality, FunctionDeclaration } from '@google/genai';
+import { GoogleGenAI, Type, GenerateContentResponse, Chat, FunctionDeclaration } from '@google/genai';
 import { UserProfile } from '../types';
 
-// Safe API Key retrieval to prevent browser crash (ReferenceError: process is not defined)
+// Robust API Key retrieval for Vite/Vercel/Browser environments
 const getApiKey = () => {
+  // 1. Check for Vite environment variables (Standard for Vercel + Vite)
+  // Vercel requires variables to start with VITE_ to be exposed to the browser
+  // Cast import.meta to any to avoid TypeScript errors regarding 'env' property
+  const meta = import.meta as any;
+  if (typeof meta !== 'undefined' && meta.env) {
+    if (meta.env.VITE_API_KEY) {
+      console.log("API Key found in VITE_API_KEY");
+      return meta.env.VITE_API_KEY;
+    }
+    // Fallback if configured differently
+    if (meta.env.API_KEY) {
+      console.log("API Key found in API_KEY");
+      return meta.env.API_KEY;
+    }
+  }
+
+  // 2. Fallback to process.env (Node.js or polyfilled environments)
   try {
-    // Check if process is defined (Node.js environment or polyfilled)
-    if (typeof process !== 'undefined' && process.env) {
+    if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
       return process.env.API_KEY;
     }
-    // Note: In Vite + Vercel, normally environment variables are replaced at build time.
-    // If the variable is missing, process.env might be undefined at runtime in browser.
   } catch (e) {
-    console.warn("Environment access error:", e);
+    console.warn("Environment access check failed:", e);
   }
+
+  console.warn("No API Key found in environment variables.");
   return '';
 };
 
 const apiKey = getApiKey();
 
 if (!apiKey) {
-  console.warn("API_KEY environment variable not detected. AI features may not work.");
+  console.error("CRITICAL: API Key is missing. Please check Vercel Environment Variables. It should be named 'VITE_API_KEY'.");
 }
 
 const ai = new GoogleGenAI({ apiKey: apiKey as string });
 
-const planGenerationModel = 'gemini-2.5-pro';
+// Switching to 2.5-flash for better JSON stability and speed
+const planGenerationModel = 'gemini-2.5-flash';
 const chatModel = 'gemini-2.5-flash';
 
 // Separate Schemas for robustness
@@ -113,7 +130,24 @@ const nutritionPlanSchema = {
   required: ['title', 'description', 'dailyPlan'],
 };
 
+// Helper function to clean markdown from JSON string
+const cleanJsonString = (str: string) => {
+    if (!str) return "{}";
+    let cleaned = str.trim();
+    // Remove markdown code blocks if present
+    if (cleaned.startsWith('```json')) {
+        cleaned = cleaned.replace(/^```json/, '').replace(/```$/, '');
+    } else if (cleaned.startsWith('```')) {
+        cleaned = cleaned.replace(/^```/, '').replace(/```$/, '');
+    }
+    return cleaned.trim();
+};
+
 export const generatePlans = async (profile: UserProfile): Promise<{ workoutPlan: any; nutritionPlan: any }> => {
+  if (!apiKey) {
+      throw new Error("API Key no configurada. Por favor revisa la configuración de Vercel.");
+  }
+
   const profileContext = `
     **Datos del Cliente:**
     - Nombre: ${profile.name}
@@ -162,6 +196,7 @@ export const generatePlans = async (profile: UserProfile): Promise<{ workoutPlan
   `;
 
   try {
+    console.log("Iniciando generación de planes...");
     // Run both generations in parallel to save time and reduce single-request load
     const [workoutResponse, nutritionResponse] = await Promise.all([
         ai.models.generateContent({
@@ -182,17 +217,41 @@ export const generatePlans = async (profile: UserProfile): Promise<{ workoutPlan
         })
     ]);
 
-    const workoutPlan = JSON.parse(workoutResponse.text);
-    const nutritionPlan = JSON.parse(nutritionResponse.text);
+    console.log("Respuestas recibidas de Gemini. Procesando...");
+
+    const workoutText = cleanJsonString(workoutResponse.text || "{}");
+    const nutritionText = cleanJsonString(nutritionResponse.text || "{}");
+
+    let workoutPlan, nutritionPlan;
+
+    try {
+        workoutPlan = JSON.parse(workoutText);
+    } catch (e) {
+        console.error("Error parsing workout JSON:", e, workoutText);
+        throw new Error("Error procesando el plan de entrenamiento.");
+    }
+
+    try {
+        nutritionPlan = JSON.parse(nutritionText);
+    } catch (e) {
+        console.error("Error parsing nutrition JSON:", e, nutritionText);
+        throw new Error("Error procesando el plan nutricional.");
+    }
 
     return {
       workoutPlan,
       nutritionPlan,
     };
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error generating plans:", error);
-    throw new Error("Failed to generate plans from Gemini API.");
+    // Provide a more user-friendly error message if possible
+    let msg = "Error generando los planes.";
+    if (error.message.includes("API Key")) msg = "Error de configuración: API Key faltante.";
+    else if (error.message.includes("403")) msg = "Error de permisos (403). Verifica tu API Key.";
+    else if (error.message.includes("429")) msg = "El sistema está ocupado (Cuota excedida). Intenta en unos minutos.";
+    
+    throw new Error(msg);
   }
 };
 
@@ -218,6 +277,12 @@ export const startChat = () => {
       console.warn("Could not parse user profile for chat init", e);
   }
 
+  // Ensure apiKey is present before creating chat
+  if (!apiKey) {
+      console.warn("Chat cannot start without API Key");
+      return;
+  }
+
   chat = ai.chats.create({
     model: chatModel,
     config: {
@@ -236,7 +301,7 @@ export const sendMessageToCoach = async (message: string): Promise<GenerateConte
     const response = await chat.sendMessage({ message });
     return response;
   }
-  throw new Error("Chat not initialized");
+  throw new Error("Chat not initialized. Check API Key configuration.");
 };
 
 export const sendToolResponseToCoach = async (toolResponses: { id: string; name: string; response: Record<string, any>; }[]): Promise<GenerateContentResponse> => {
