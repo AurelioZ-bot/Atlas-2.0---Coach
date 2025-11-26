@@ -1,13 +1,28 @@
 import { GoogleGenAI, Type, GenerateContentResponse, Chat, Modality, FunctionDeclaration } from '@google/genai';
 import { UserProfile } from '../types';
 
-if (!process.env.API_KEY) {
-  // In a real app, you'd want to handle this more gracefully.
-  // For this project, we assume the API key is set in the environment.
-  console.warn("API_KEY environment variable not set. Using a placeholder.");
+// Safe API Key retrieval to prevent browser crash (ReferenceError: process is not defined)
+const getApiKey = () => {
+  try {
+    // Check if process is defined (Node.js environment or polyfilled)
+    if (typeof process !== 'undefined' && process.env) {
+      return process.env.API_KEY;
+    }
+    // Note: In Vite + Vercel, normally environment variables are replaced at build time.
+    // If the variable is missing, process.env might be undefined at runtime in browser.
+  } catch (e) {
+    console.warn("Environment access error:", e);
+  }
+  return '';
+};
+
+const apiKey = getApiKey();
+
+if (!apiKey) {
+  console.warn("API_KEY environment variable not detected. AI features may not work.");
 }
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+const ai = new GoogleGenAI({ apiKey: apiKey as string });
 
 const planGenerationModel = 'gemini-2.5-pro';
 const chatModel = 'gemini-2.5-flash';

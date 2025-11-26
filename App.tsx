@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { UserProfile, WorkoutPlan, NutritionPlan, WorkoutLog, RegisteredUser } from './types';
 import Onboarding from './components/Onboarding';
@@ -16,41 +15,38 @@ const App: React.FC = () => {
   const [paymentLink, setPaymentLink] = useState<string>('');
   const [adminPhone, setAdminPhone] = useState<string>('');
 
-  // Load basic data
+  // Load basic data with granular error handling
   useEffect(() => {
-    try {
-      const savedProfile = localStorage.getItem('atlas2_userProfile');
-      const savedHistory = localStorage.getItem('atlas2_workoutHistory');
-      const savedPrice = localStorage.getItem('atlas2_subscriptionPrice');
-      const savedPaymentLink = localStorage.getItem('atlas2_paymentLink');
-      const savedAdminPhone = localStorage.getItem('atlas2_adminPhone');
-      const savedWorkoutPlan = localStorage.getItem('atlas2_workoutPlan');
-      const savedNutritionPlan = localStorage.getItem('atlas2_nutritionPlan');
+    const safeJsonParse = (key: string, setter: (value: any) => void) => {
+        try {
+            const item = localStorage.getItem(key);
+            if (item) {
+                setter(JSON.parse(item));
+            }
+        } catch (error) {
+            console.error(`Error loading ${key} from localStorage:`, error);
+            // Optionally clear the corrupted item
+            // localStorage.removeItem(key);
+        }
+    };
 
-      if (savedProfile) {
-        setUserProfile(JSON.parse(savedProfile));
-      }
-      if (savedHistory) {
-        setWorkoutHistory(JSON.parse(savedHistory));
-      }
-      if (savedPrice) {
-        setSubscriptionPrice(JSON.parse(savedPrice));
-      }
-      if (savedPaymentLink) {
-        setPaymentLink(savedPaymentLink);
-      }
-      if (savedAdminPhone) {
-        setAdminPhone(savedAdminPhone);
-      }
-      if (savedWorkoutPlan) {
-        setWorkoutPlan(JSON.parse(savedWorkoutPlan));
-      }
-      if (savedNutritionPlan) {
-        setNutritionPlan(JSON.parse(savedNutritionPlan));
-      }
-    } catch (error) {
-      console.error("Failed to load data from local storage", error);
-    }
+    const safeStringLoad = (key: string, setter: (value: string) => void) => {
+        try {
+            const item = localStorage.getItem(key);
+            if (item) setter(item);
+        } catch (error) {
+            console.error(`Error loading ${key}:`, error);
+        }
+    };
+
+    safeJsonParse('atlas2_userProfile', setUserProfile);
+    safeJsonParse('atlas2_workoutHistory', setWorkoutHistory);
+    safeJsonParse('atlas2_subscriptionPrice', setSubscriptionPrice);
+    safeJsonParse('atlas2_workoutPlan', setWorkoutPlan);
+    safeJsonParse('atlas2_nutritionPlan', setNutritionPlan);
+    
+    safeStringLoad('atlas2_paymentLink', setPaymentLink);
+    safeStringLoad('atlas2_adminPhone', setAdminPhone);
   }, []);
 
   // Central Check for Subscription Status based on Registry
