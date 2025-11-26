@@ -130,17 +130,21 @@ const nutritionPlanSchema = {
   required: ['title', 'description', 'dailyPlan'],
 };
 
-// Helper function to clean markdown from JSON string
+// Robust helper function to extract JSON from potentially chatty responses
 const cleanJsonString = (str: string) => {
     if (!str) return "{}";
-    let cleaned = str.trim();
-    // Remove markdown code blocks if present
-    if (cleaned.startsWith('```json')) {
-        cleaned = cleaned.replace(/^```json/, '').replace(/```$/, '');
-    } else if (cleaned.startsWith('```')) {
-        cleaned = cleaned.replace(/^```/, '').replace(/```$/, '');
+    
+    // Find the first '{' and the last '}'
+    const firstOpen = str.indexOf('{');
+    const lastClose = str.lastIndexOf('}');
+
+    // If valid JSON bounds are found, extract the substring
+    if (firstOpen !== -1 && lastClose !== -1 && lastClose > firstOpen) {
+        return str.substring(firstOpen, lastClose + 1);
     }
-    return cleaned.trim();
+
+    // Fallback: Return original (though parsing will likely fail if it wasn't caught above)
+    return str;
 };
 
 export const generatePlans = async (profile: UserProfile): Promise<{ workoutPlan: any; nutritionPlan: any }> => {
@@ -218,6 +222,10 @@ export const generatePlans = async (profile: UserProfile): Promise<{ workoutPlan
     ]);
 
     console.log("Respuestas recibidas de Gemini. Procesando...");
+    
+    // Log raw responses for debugging
+    console.log("Raw Workout Response:", workoutResponse.text);
+    console.log("Raw Nutrition Response:", nutritionResponse.text);
 
     const workoutText = cleanJsonString(workoutResponse.text || "{}");
     const nutritionText = cleanJsonString(nutritionResponse.text || "{}");
@@ -228,14 +236,14 @@ export const generatePlans = async (profile: UserProfile): Promise<{ workoutPlan
         workoutPlan = JSON.parse(workoutText);
     } catch (e) {
         console.error("Error parsing workout JSON:", e, workoutText);
-        throw new Error("Error procesando el plan de entrenamiento.");
+        throw new Error("Error procesando el plan de entrenamiento (JSON inválido).");
     }
 
     try {
         nutritionPlan = JSON.parse(nutritionText);
     } catch (e) {
         console.error("Error parsing nutrition JSON:", e, nutritionText);
-        throw new Error("Error procesando el plan nutricional.");
+        throw new Error("Error procesando el plan nutricional (JSON inválido).");
     }
 
     return {
@@ -250,6 +258,7 @@ export const generatePlans = async (profile: UserProfile): Promise<{ workoutPlan
     if (error.message.includes("API Key")) msg = "Error de configuración: API Key faltante.";
     else if (error.message.includes("403")) msg = "Error de permisos (403). Verifica tu API Key.";
     else if (error.message.includes("429")) msg = "El sistema está ocupado (Cuota excedida). Intenta en unos minutos.";
+    else if (error.message.includes("JSON")) msg = "Error leyendo la respuesta de la IA. Intenta de nuevo.";
     
     throw new Error(msg);
   }
